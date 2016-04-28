@@ -1,0 +1,6 @@
+Q: The FaceRecognizer::predict method returns a label indicating a match has been
+   found. Is it possible to obtain a measure of the system's confidence in that
+   match?
+A: One overloaded version of the predict method has a return type of void and
+   instead has two additional arguments taken by reference; one for the resulting
+   label, and another for the confidence value, as a double, of the match.
