@@ -45,7 +45,7 @@ cv::Ptr<cv::face::BasicFaceRecognizer> make_recognizer(int argc, char *argv[]) {
 	return recognizer;
 }
 
-void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
+void camera_loop(boost::shared_ptr<boost::asio::io_service> service,
                  cv::VideoCapture vid,
                  cv::Ptr<cv::face::BasicFaceRecognizer> recognizer,
                  unsigned int count) {
@@ -95,21 +95,21 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
 
 	cv::imshow("optflow", cropped_frame);
 	cv::waitKey(1000/60);
-	io_service->post(std::bind(camera_loop, io_service, vid, recognizer, count));
+	service->post(std::bind(camera_loop, service, vid, recognizer, count));
 }
 
-void camera_main(boost::shared_ptr<boost::asio::io_service> io_service,
+void camera_main(boost::shared_ptr<boost::asio::io_service> service,
                  cv::Ptr<cv::face::BasicFaceRecognizer> recognizer) {
 	cv::VideoCapture vid(0);
 	if(!vid.isOpened()) {
 		throw std::runtime_error("failed to open video capture device");
 	}
 	cv::namedWindow("optflow");
-	io_service->post(std::bind(camera_loop, io_service, vid, recognizer, 0));
+	service->post(std::bind(camera_loop, service, vid, recognizer, 0));
 }
 
-void worker_main(boost::shared_ptr<boost::asio::io_service> io_service) {
-	io_service->run();
+void worker_main(boost::shared_ptr<boost::asio::io_service> service) {
+	service->run();
 }
 
 int main(int argc, char *argv[]) {
@@ -117,14 +117,14 @@ int main(int argc, char *argv[]) {
 	auto recognizer = make_recognizer(argc, argv);
 	std::cout << "done" << std::endl;
 
-	auto io_service = boost::make_shared<boost::asio::io_service>();
-	auto work       = boost::make_shared<boost::asio::io_service::work>(*io_service);
-	auto strand     = boost::make_shared<boost::asio::io_service::strand>(*io_service);
+	auto service = boost::make_shared<boost::asio::io_service>();
+	auto work    = boost::make_shared<boost::asio::io_service::work>(*service);
+	auto strand  = boost::make_shared<boost::asio::io_service::strand>(*service);
 	boost::thread_group workers;
 	for(unsigned int w = 0; w < CONFIG_NUM_WORKERS; ++w) {
-		workers.create_thread(boost::bind(worker_main, io_service));
+		workers.create_thread(boost::bind(worker_main, service));
 	}
-	io_service->post(boost::bind(camera_main, io_service, recognizer));
+	service->post(boost::bind(camera_main, service, recognizer));
 	work.reset();
 	workers.join_all();
 	return 0;
