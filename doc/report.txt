@@ -3,4 +3,8 @@ Q: The FaceRecognizer::predict method returns a label indicating a match has bee
    match?
 A: One overloaded version of the predict method has a return type of void and
    instead has two additional arguments taken by reference; one for the resulting
-   label, and another for the confidence value, as a double, of the match.
+   label, and another for the confidence value, as a double, of the match. The
+   current program recognizes the face if the face is detected across at least 10
+   frames, allowing for some error. This algorithm could be improved by making
+   use of the confidence value to increment the counter by a variable amount
+   instead of by a constant amount for every detection regardless of confidence.
