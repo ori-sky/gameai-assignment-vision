@@ -8,3 +8,12 @@ A: One overloaded version of the predict method has a return type of void and
    frames, allowing for some error. This algorithm could be improved by making
    use of the confidence value to increment the counter by a variable amount
    instead of by a constant amount for every detection regardless of confidence.
+
+Q: Does the program compensate if you are far from the camera? Might a cascading
+   classifier help?
+A: In its current state, the program does not perform optimally when the face is
+   significantly further away from, too close to, or at the wrong orientation to,
+   the camera. Using a cascading classifier simply to detect the position and
+   size of the face and eyes, the program could additionally perform affine
+   transformations (translation, rotation, scaling, cropping) to align the face
+   perfectly for prediction using the face recognition algorithm.
