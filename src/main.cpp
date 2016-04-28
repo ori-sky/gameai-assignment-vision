@@ -82,19 +82,19 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> service,
 
 	cv::Rect color_rect(0, 0, flipped_frame.cols, flipped_frame.rows);
 
-	cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 0, 0), 10);
+	cv::Scalar color(0, 255, 255);
 	switch(count) {
 	case 0:
-		cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 0, 255), 8);
+		color = cv::Scalar(0, 0, 255);
 		break;
 	case 10:
-		cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 255, 0), 8);
-		break;
-	default:
-		cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 255, 255), 8);
+		color = cv::Scalar(0, 255, 0);
 		break;
 	}
-	cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 0, 0), 2);
+
+	cv::rectangle(flipped_frame, color_rect, cv::Scalar(0), 10);
+	cv::rectangle(flipped_frame, color_rect, color, 8);
+	cv::rectangle(flipped_frame, color_rect, cv::Scalar(0), 2);
 
 	cv::imshow("optflow", flipped_frame);
 	cv::waitKey(1000/60);
