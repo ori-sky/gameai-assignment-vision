@@ -77,23 +77,26 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> service,
 		if(count > 0) { --count; }
 	}
 
-	cv::Rect color_rect(0, 0, cropped_frame.cols, cropped_frame.rows);
+	cv::Mat flipped_frame;
+	cv::flip(cropped_frame, flipped_frame, 1);
 
-	cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 0, 0), 10);
+	cv::Rect color_rect(0, 0, flipped_frame.cols, flipped_frame.rows);
+
+	cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 0, 0), 10);
 	switch(count) {
 	case 0:
-		cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 0, 255), 8);
+		cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 0, 255), 8);
 		break;
 	case 10:
-		cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 255, 0), 8);
+		cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 255, 0), 8);
 		break;
 	default:
-		cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 255, 255), 8);
+		cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 255, 255), 8);
 		break;
 	}
-	cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 0, 0), 2);
+	cv::rectangle(flipped_frame, color_rect, cv::Scalar(0, 0, 0), 2);
 
-	cv::imshow("optflow", cropped_frame);
+	cv::imshow("optflow", flipped_frame);
 	cv::waitKey(1000/60);
 	service->post(std::bind(camera_loop, service, vid, recognizer, count));
 }
