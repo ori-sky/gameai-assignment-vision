@@ -74,20 +74,32 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
 
 	int predicted = recognizer->predict(resized_frame);
 	if(predicted == CONFIG_FACE_CLASS) {
-		if(count == 10) {
-			std::cout << "recognized face" << std::endl;
-		} else {
-			++count;
-		}
-	} else if(count > 0) {
-		--count;
-		std::cout << std::endl;
+		if(count < 10) { ++count; }
+	} else {
+		if(count > 0) { --count; }
 	}
 
-	cv::imshow("optflow", cropped_frame);
-	if(cv::waitKey(30) < 0) {
-		io_service->post(std::bind(camera_loop, io_service, vid, recognizer, count));
+	cv::Rect color_rect(0, 0, cropped_frame.cols, cropped_frame.rows);
+
+	cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 0, 0), 10);
+	switch(count) {
+	case 0:
+		cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 0, 255), 8);
+		break;
+	case 10:
+		cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 255, 0), 8);
+		break;
+	default:
+		cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 255, 255), 8);
+		break;
 	}
+	cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 0, 0), 2);
+
+	cv::imshow("optflow", cropped_frame);
+	cv::waitKey(30);
+	//if(cv::waitKey(30) < 0) {
+		io_service->post(std::bind(camera_loop, io_service, vid, recognizer, count));
+	//}
 }
 
 void camera_main(boost::shared_ptr<boost::asio::io_service> io_service,
