@@ -25,14 +25,14 @@ namespace fs = std::tr2::sys;
 
 cv::Ptr<cv::face::BasicFaceRecognizer> make_recognizer(int argc, char *argv[]) {
 	std::vector<cv::Mat> images;
-	std::vector<int> labels;
+	std::vector<int>     labels;
 
 	// iterate through subdirectories to locate .pgm files
 	fs::path p(argc > 1 ? argv[1] : "../assets/faces");
 	for(const auto &entry : fs::recursive_directory_iterator{p}) {
 		if(fs::is_regular_file(entry.status())) {
 			if(entry.path().extension() == ".pgm") {
-				std::string str = entry.path().parent_path().stem().string();
+				auto str = entry.path().parent_path().stem().string();
 				int label = atoi(str.c_str() + 1);
 				images.push_back(cv::imread(entry.path().string().c_str(), 0));
 				labels.push_back(label);
@@ -52,6 +52,7 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> service,
 	cv::Mat frame;
 	vid >> frame;
 
+	/* calculate maximum dimensions matching target aspect ratio of 92x112 */
 	float actual_aspect = (float)frame.cols / (float)frame.rows;
 	float target_aspect = 92.0f / 112.0f;
 	int target_width = frame.cols, target_height = frame.rows;
@@ -61,15 +62,20 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> service,
 		target_height = target_width / target_aspect;
 	}
 
+	/* crop frame using frame center as origin */
 	cv::Rect rect(frame.cols / 2 - target_width / 2,
 	              frame.rows / 2 - target_height / 2,
 	              target_width, target_height);
-
 	cv::Mat cropped_frame = frame(rect);
+
+	/* convert to grayscale and scale to 92x112 */
 	cv::Mat gray_frame, resized_frame;
 	cv::cvtColor(cropped_frame, gray_frame, CV_RGB2GRAY);
 	cv::resize(gray_frame, resized_frame, cv::Size(92, 112));
 
+	/* keep running counter of successful recognitions
+	 * decrement counter per unsuccessful frame to allow for partial error
+	 */
 	int predicted = recognizer->predict(resized_frame);
 	if(predicted == CONFIG_FACE_CLASS) {
 		if(count < 10) { ++count; }
@@ -77,11 +83,10 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> service,
 		if(count > 0) { --count; }
 	}
 
-	cv::Mat flipped_frame;
-	cv::flip(cropped_frame, flipped_frame, 1);
-
-	cv::Rect color_rect(0, 0, flipped_frame.cols, flipped_frame.rows);
-
+	/* red    = not recognized
+	 * yellow = partially recognized
+	 * green  = fully recognized
+	 */
 	cv::Scalar color(0, 255, 255);
 	switch(count) {
 	case 0:
@@ -92,6 +97,14 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> service,
 		break;
 	}
 
+	/* flip frame to display in a more sensible manner */
+	cv::Mat flipped_frame;
+	cv::flip(cropped_frame, flipped_frame, 1);
+
+	/* draw colored border around frame to be displayed
+	 * border surrounded by 2px of black to strengthen border contrast
+	 */
+	cv::Rect color_rect(0, 0, flipped_frame.cols, flipped_frame.rows);
 	cv::rectangle(flipped_frame, color_rect, cv::Scalar(0), 10);
 	cv::rectangle(flipped_frame, color_rect, color, 8);
 	cv::rectangle(flipped_frame, color_rect, cv::Scalar(0), 2);
