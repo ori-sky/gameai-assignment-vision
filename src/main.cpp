@@ -2,7 +2,7 @@
 #include <fstream>
 
 #ifdef __GNUC__
-#include <experimental/filesystem> // Full support in C++17
+#include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #else
 #include <filesystem>
@@ -25,25 +25,24 @@ namespace fs = std::tr2::sys;
 
 cv::Ptr<cv::face::BasicFaceRecognizer> make_recognizer(int argc, char *argv[]) {
 	std::vector<cv::Mat> images;
-	std::vector<int>     labels;
+	std::vector<int> labels;
 
-	// Iterate through all subdirectories, looking for .pgm files
+	// iterate through subdirectories to locate .pgm files
 	fs::path p(argc > 1 ? argv[1] : "../assets/faces");
 	for(const auto &entry : fs::recursive_directory_iterator{p}) {
 		if(fs::is_regular_file(entry.status())) {
 			if(entry.path().extension() == ".pgm") {
 				std::string str = entry.path().parent_path().stem().string();
-				int label = atoi(str.c_str() + 1); // s1 -> 1
+				int label = atoi(str.c_str() + 1);
 				images.push_back(cv::imread(entry.path().string().c_str(), 0));
 				labels.push_back(label);
 			}
 		}
 	}
 
-	std::cout << "training..." << std::endl;
-	cv::Ptr<cv::face::BasicFaceRecognizer> model = cv::face::createEigenFaceRecognizer();
-	model->train(images, labels);
-	return model;
+	auto recognizer = cv::face::createEigenFaceRecognizer();
+	recognizer->train(images, labels);
+	return recognizer;
 }
 
 void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
@@ -53,19 +52,18 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
 	cv::Mat frame;
 	vid >> frame;
 
-	int new_width, new_height;
 	float actual_aspect = (float)frame.cols / (float)frame.rows;
 	float target_aspect = 92.0f / 112.0f;
+	int target_width = frame.cols, target_height = frame.rows;
 	if(actual_aspect > target_aspect) {
-		new_height = frame.rows;
-		new_width = new_height * target_aspect;
+		target_width = target_height * target_aspect;
 	} else {
-		new_width = frame.cols;
-		new_height = new_width / target_aspect;
+		target_height = target_width / target_aspect;
 	}
 
-	cv::Rect rect(frame.cols / 2 - new_width / 2, frame.rows / 2 - new_height / 2,
-	              new_width, new_height);
+	cv::Rect rect(frame.cols / 2 - target_width / 2,
+	              frame.rows / 2 - target_height / 2,
+	              target_width, target_height);
 
 	cv::Mat cropped_frame = frame(rect);
 	cv::Mat gray_frame, resized_frame;
@@ -96,10 +94,8 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
 	cv::rectangle(cropped_frame, color_rect, cv::Scalar(0, 0, 0), 2);
 
 	cv::imshow("optflow", cropped_frame);
-	cv::waitKey(30);
-	//if(cv::waitKey(30) < 0) {
-		io_service->post(std::bind(camera_loop, io_service, vid, recognizer, count));
-	//}
+	cv::waitKey(1000/60);
+	io_service->post(std::bind(camera_loop, io_service, vid, recognizer, count));
 }
 
 void camera_main(boost::shared_ptr<boost::asio::io_service> io_service,
@@ -117,7 +113,9 @@ void worker_main(boost::shared_ptr<boost::asio::io_service> io_service) {
 }
 
 int main(int argc, char *argv[]) {
+	std::cout << "training..." << std::endl;
 	auto recognizer = make_recognizer(argc, argv);
+	std::cout << "done" << std::endl;
 
 	auto io_service = boost::make_shared<boost::asio::io_service>();
 	auto work       = boost::make_shared<boost::asio::io_service::work>(*io_service);
