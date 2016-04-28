@@ -48,7 +48,8 @@ cv::Ptr<cv::face::BasicFaceRecognizer> make_recognizer(int argc, char *argv[]) {
 
 void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
                  cv::VideoCapture vid,
-                 cv::Ptr<cv::face::BasicFaceRecognizer> recognizer) {
+                 cv::Ptr<cv::face::BasicFaceRecognizer> recognizer,
+                 unsigned int count) {
 	cv::Mat frame;
 	vid >> frame;
 
@@ -66,20 +67,26 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
 	cv::Rect rect(frame.cols / 2 - new_width / 2, frame.rows / 2 - new_height / 2,
 	              new_width, new_height);
 
+	cv::Mat cropped_frame = frame(rect);
 	cv::Mat gray_frame, resized_frame;
-	cv::cvtColor(frame(rect), gray_frame, CV_RGB2GRAY);
+	cv::cvtColor(cropped_frame, gray_frame, CV_RGB2GRAY);
 	cv::resize(gray_frame, resized_frame, cv::Size(92, 112));
 
 	int predicted = recognizer->predict(resized_frame);
 	if(predicted == CONFIG_FACE_CLASS) {
-		std::cout << "recognized face" << std::endl;
-	} else {
+		if(count == 10) {
+			std::cout << "recognized face" << std::endl;
+		} else {
+			++count;
+		}
+	} else if(count > 0) {
+		--count;
 		std::cout << std::endl;
 	}
 
-	cv::imshow("optflow", resized_frame);
+	cv::imshow("optflow", cropped_frame);
 	if(cv::waitKey(30) < 0) {
-		io_service->post(std::bind(camera_loop, io_service, vid, recognizer));
+		io_service->post(std::bind(camera_loop, io_service, vid, recognizer, count));
 	}
 }
 
@@ -90,7 +97,7 @@ void camera_main(boost::shared_ptr<boost::asio::io_service> io_service,
 		throw std::runtime_error("failed to open video capture device");
 	}
 	cv::namedWindow("optflow");
-	io_service->post(std::bind(camera_loop, io_service, vid, recognizer));
+	io_service->post(std::bind(camera_loop, io_service, vid, recognizer, 0));
 }
 
 void worker_main(boost::shared_ptr<boost::asio::io_service> io_service) {
