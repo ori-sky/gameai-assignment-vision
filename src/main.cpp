@@ -23,10 +23,6 @@ namespace fs = std::tr2::sys;
 #define CONFIG_NUM_WORKERS 2
 #define CONFIG_FACE_CLASS 41
 
-// https://msdn.microsoft.com/en-us/library/dn986850.aspx
-// GCC 5.2.1 Ok on Linux
-// g++ -std=c++11 facerec.cpp -lstdc++fs
-
 cv::Ptr<cv::face::BasicFaceRecognizer> make_recognizer(int argc, char *argv[]) {
 	std::vector<cv::Mat> images;
 	std::vector<int>     labels;
@@ -82,10 +78,9 @@ void camera_loop(boost::shared_ptr<boost::asio::io_service> io_service,
 	}
 
 	cv::imshow("optflow", resized_frame);
-	cv::waitKey(1000/30);
-	//if(cv::waitKey(30) < 0) {
+	if(cv::waitKey(30) < 0) {
 		io_service->post(std::bind(camera_loop, io_service, vid, recognizer));
-	//}
+	}
 }
 
 void camera_main(boost::shared_ptr<boost::asio::io_service> io_service,
